@@ -215,6 +215,12 @@ class LoadStreams:  # multiple IP or RTSP cameras
             thread.start()
         print('')  # newline
 
+        # check for common shapes
+        s = np.stack([letterbox(x, new_shape=self.img_size)[0].shape for x in self.imgs], 0)  # inference shapes
+        self.rect = np.unique(s, axis=0).shape[0] == 1  # rect inference if all shapes equal
+        if not self.rect:
+            print('WARNING: Different stream shapes detected. For optimal performance supply similarly-shaped streams.')
+
     def update(self, index, cap):
         # Read next stream frame in a daemon thread
         n = 0
@@ -239,7 +245,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
             raise StopIteration
 
         # Letterbox
-        img = [letterbox(x, new_shape=self.img_size, interp=cv2.INTER_LINEAR)[0] for x in img0]
+        img = [letterbox(x, new_shape=self.img_size, auto=self.rect, interp=cv2.INTER_LINEAR)[0] for x in img0]
 
         # Stack
         img = np.stack(img, 0)
@@ -257,7 +263,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=416, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_labels=False, cache_images=False):
+                 cache_labels=False, cache_images=False, single_cls=False):
         path = str(Path(path))  # os-agnostic
         assert os.path.isfile(path), 'File not found %s. See %s' % (path, help_url)
         with open(path, 'r') as f:
@@ -337,7 +343,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels: %s' % file
                     if np.unique(l, axis=0).shape[0] < l.shape[0]:  # duplicate rows
                         nd += 1  # print('WARNING: duplicate rows in %s' % self.label_files[i])  # duplicate rows
-
+                    if single_cls:
+                        l[:, 0] = 0  # force dataset into single-class mode
                     self.labels[i] = l
                     nf += 1  # file found
 
@@ -586,10 +593,10 @@ def load_mosaic(self, index):
     # Augment
     # img4 = img4[s // 2: int(s * 1.5), s // 2:int(s * 1.5)]  # center crop (WARNING, requires box pruning)
     img4, labels4 = random_affine(img4, labels4,
-                                  degrees=self.hyp['degrees'] * 0,
-                                  translate=self.hyp['translate'] * 0,
-                                  scale=self.hyp['scale'] * 0,
-                                  shear=self.hyp['shear'] * 0,
+                                  degrees=self.hyp['degrees'] * 1,
+                                  translate=self.hyp['translate'] * 1,
+                                  scale=self.hyp['scale'] * 1,
+                                  shear=self.hyp['shear'] * 1,
                                   border=-s // 2)  # border to remove
 
     return img4, labels4

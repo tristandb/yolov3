@@ -361,7 +361,7 @@ class FocalLoss(nn.Module):
             return loss
 
 
-def compute_loss(p, targets, model):  # predictions, targets, model
+def compute_loss(p, targets, model, giou_flag=True):  # predictions, targets, model
     ft = torch.cuda.FloatTensor if p[0].is_cuda else torch.Tensor
     lcls, lbox, lobj = ft([0]), ft([0]), ft([0])
     tcls, tbox, indices, anchor_vec = build_targets(model, targets)
@@ -399,7 +399,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pbox = torch.cat((pxy, pwh), 1)  # predicted box
             giou = bbox_iou(pbox.t(), tbox[i], x1y1x2y2=False, GIoU=True)  # giou computation
             lbox += (1.0 - giou).sum() if red == 'sum' else (1.0 - giou).mean()  # giou loss
-            tobj[b, a, gj, gi] = giou.detach().type(tobj.dtype)
+            tobj[b, a, gj, gi] = giou.detach().type(tobj.dtype) if giou_flag else 1.0
 
             if 'default' in arc and model.nc > 1:  # cls loss (only if multiple classes)
                 t = torch.zeros_like(ps[:, 5:])  # targets
@@ -512,6 +512,8 @@ def non_max_suppression(prediction, conf_thres=0.5, iou_thres=0.5, multi_cls=Tru
     min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
 
     method = 'vision_batch'
+    nc = prediction[0].shape[1] - 5  # number of classes
+    multi_cls = multi_cls and (nc > 1)  # allow multiple classes per anchor
     output = [None] * len(prediction)
     for image_i, pred in enumerate(prediction):
         # Apply conf constraint
@@ -525,7 +527,6 @@ def non_max_suppression(prediction, conf_thres=0.5, iou_thres=0.5, multi_cls=Tru
             continue
 
         # Compute conf
-        torch.sigmoid_(pred[..., 5:])
         pred[..., 5:] *= pred[..., 4:5]  # conf = obj_conf * cls_conf
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
@@ -633,7 +634,7 @@ def get_yolo_layers(model):
 
 def print_model_biases(model):
     # prints the bias neurons preceding each yolo layer
-    print('\nModel Bias Summary:')
+    print('\nModel Bias Summary: %8s%18s%18s%18s' % ('layer', 'regression', 'objectness', 'classification'))
     multi_gpu = type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
     for l in model.yolo_layers:  # print pretrained biases
         if multi_gpu:
@@ -642,9 +643,9 @@ def print_model_biases(model):
         else:
             na = model.module_list[l].na
             b = model.module_list[l - 1][0].bias.view(na, -1)  # bias 3x85
-        print('layer %3g regression: %5.2f+/-%-5.2f ' % (l, b[:, :4].mean(), b[:, :4].std()),
-              'objectness: %5.2f+/-%-5.2f ' % (b[:, 4].mean(), b[:, 4].std()),
-              'classification: %5.2f+/-%-5.2f' % (b[:, 5:].mean(), b[:, 5:].std()))
+        print(' ' * 20 + '%8g %18s%18s%18s' % (l, '%5.2f+/-%-5.2f' % (b[:, :4].mean(), b[:, :4].std()),
+                                               '%5.2f+/-%-5.2f' % (b[:, 4].mean(), b[:, 4].std()),
+                                               '%5.2f+/-%-5.2f' % (b[:, 5:].mean(), b[:, 5:].std())))
 
 
 def strip_optimizer(f='weights/last.pt'):  # from utils.utils import *; strip_optimizer()

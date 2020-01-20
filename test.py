@@ -16,6 +16,7 @@ def test(cfg,
          conf_thres=0.001,
          iou_thres=0.5,  # for nms
          save_json=False,
+         single_cls=False,
          model=None,
          dataloader=None):
     # Initialize/load model and set device
@@ -35,7 +36,7 @@ def test(cfg,
         if weights.endswith('.pt'):  # pytorch format
             model.load_state_dict(torch.load(weights, map_location=device)['model'])
         else:  # darknet format
-            _ = load_darknet_weights(model, weights)
+            load_darknet_weights(model, weights)
 
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
@@ -45,7 +46,7 @@ def test(cfg,
 
     # Configure run
     data = parse_data_cfg(data)
-    nc = int(data['classes'])  # number of classes
+    nc = 1 if single_cls else int(data['classes'])  # number of classes
     path = data['valid']  # path to test images
     names = load_classes(data['names'])  # class names
     iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
@@ -212,10 +213,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')
     parser.add_argument('--img-size', type=int, default=416, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
+    parser.add_argument('--iou-thres', type=float, default=0.6, help='IOU threshold for NMS')
     parser.add_argument('--save-json', action='store_true', help='save a cocoapi-compatible JSON results file')
     parser.add_argument('--task', default='test', help="'test', 'study', 'benchmark'")
     parser.add_argument('--device', default='', help='device id (i.e. 0 or 0,1) or cpu')
+    parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     opt = parser.parse_args()
     opt.save_json = opt.save_json or any([x in opt.data for x in ['coco.data', 'coco2014.data', 'coco2017.data']])
     print(opt)
@@ -229,7 +231,8 @@ if __name__ == '__main__':
              opt.img_size,
              opt.conf_thres,
              opt.iou_thres,
-             opt.save_json)
+             opt.save_json,
+             opt.single_cls)
 
     elif opt.task == 'benchmark':
         # mAPs at 320-608 at conf 0.5 and 0.7

@@ -195,7 +195,7 @@ class YOLOLayer(nn.Module):
             io[..., :4] *= self.stride
 
             if 'default' in self.arc:  # seperate obj and cls
-                torch.sigmoid_(io[..., 4])
+                torch.sigmoid_(io[..., 4:])
             elif 'BCE' in self.arc:  # unified BCE (80 classes)
                 torch.sigmoid_(io[..., 5:])
                 io[..., 4] = 1
@@ -350,8 +350,6 @@ def load_darknet_weights(self, weights, cutoff=-1):
             conv_w = torch.from_numpy(weights[ptr:ptr + num_w]).view_as(conv_layer.weight)
             conv_layer.weight.data.copy_(conv_w)
             ptr += num_w
-
-    return cutoff
 
 
 def save_weights(self, path='model.weights', cutoff=-1):
