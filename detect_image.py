@@ -1,4 +1,5 @@
 import argparse
+import os
 from sys import platform
 
 from models import *  # set ONNX_EXPORT in models.py
@@ -72,8 +73,10 @@ class YoloV3:
         self.model = Darknet(self.cfg, self.img_size)
 
         # Load weights
-        attempt_download(self.weights_file)
+        # attempt_download(self.weights_file)
         if self.weights_file.endswith('.pt'):  # pytorch format
+            print(self.weights_file)
+            print(os.getcwd())
             self.model.load_state_dict(torch.load(self.weights_file, map_location=self.device)['model'])
         else:  # darknet format
             _ = load_darknet_weights(self.model, self.weights_file)
