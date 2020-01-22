@@ -10,7 +10,6 @@ from skimage.color import gray2rgb
 
 from sklearn import preprocessing
 
-import matplotlib.pyplot as plt
 """
 Extension to Detect.py that can be used for detecting objects. 
 
