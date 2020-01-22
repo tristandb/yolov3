@@ -55,7 +55,7 @@ class LoadSingleImage:
         return img, img0, self.cap
 
 class YoloV3:
-    def __init__(self, weights_file, half=False, img_size=(416, 416), agnostic_nms=False, iou_thres=0.5, conf_thres=0.3,cfg='cfg/yolov3-spp.cfg', device='', names_file='data/coco.names'):
+    def __init__(self, weights_file, half=False, img_size=(416, 416), agnostic_nms=False, iou_thres=0.5, conf_thres=0.3,cfg='cfg/yolov3-spp.cfg', device='0', names_file='data/coco.names'):
         self.iou_thres = iou_thres
         self.conf_thres = conf_thres
         self.agnostic_nms = agnostic_nms
