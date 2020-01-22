@@ -6,6 +6,8 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 
+import torch
+
 from skimage.color import gray2rgb
 
 from sklearn import preprocessing
@@ -55,7 +57,7 @@ class LoadSingleImage:
         return img, img0, self.cap
 
 class YoloV3:
-    def __init__(self, weights_file, half=False, img_size=(416, 416), agnostic_nms=False, iou_thres=0.5, conf_thres=0.3,cfg='cfg/yolov3-spp.cfg', device='0', names_file='data/coco.names'):
+    def __init__(self, weights_file, half=False, img_size=(416, 416), agnostic_nms=False, iou_thres=0.5, conf_thres=0.3,cfg='cfg/yolov3-spp.cfg', device='1', names_file='data/coco.names'):
         self.iou_thres = iou_thres
         self.conf_thres = conf_thres
         self.agnostic_nms = agnostic_nms
@@ -66,7 +68,7 @@ class YoloV3:
         self.names_file = names_file
 
         # Select device
-        self.device = torch_utils.select_device(device='cpu' if ONNX_EXPORT else device)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Initialize model
         self.model = Darknet(self.cfg, self.img_size)
