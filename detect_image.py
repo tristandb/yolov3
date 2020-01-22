@@ -68,7 +68,7 @@ class YoloV3:
         self.names_file = names_file
 
         # Select device
-        print("Cuda available: ")
+        print("Cuda available")
         print(torch.cuda.is_available())
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
