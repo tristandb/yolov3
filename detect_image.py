@@ -124,7 +124,7 @@ class YoloV3:
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0s.shape).round()
 
-                    for x, y, w, h, conf, cls in det.detach().cpu().numpy():
+                    for x, y, w, h, conf, cls in det.cpu().detach().numpy():
                         prediction.append({'class': cls.item(), 'x': x.item()/self.img_size[0], 'y': y.item()/self.img_size[0], 'width': (w.item()-x.item())/self.img_size[0], 'height': (h.item()-y.item())/self.img_size[0], 'conf': conf.item()})
                 predictions.append(prediction)
         return predictions, t0
